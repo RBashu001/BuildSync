@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced BIM & CTM/CPM Digital Twin Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js for interactive S-Curve & Resource Histogram -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans h-full flex flex-col antialiased">
+
+    <!-- Header -->
+    <header class="bg-slate-900 border-b border-slate-800 px-6 py-3.5 flex flex-wrap items-center justify-between shrink-0 gap-4">
+        <div class="flex items-center space-x-3">
+            <div class="bg-blue-600 p-2.5 rounded-xl shadow-lg shadow-blue-500/30 flex items-center justify-center">
+                <i data-lucide="hard-hat" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                    BIM Digital Twin <span class="text-xs uppercase px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold">CTM & Gemini Expert Advisor</span>
+                </h1>
+                <p class="text-xs text-slate-400">Revit Model API • Critical Path Method • Dynamic Schedule Engine</p>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-semibold text-slate-400 gap-1">
+            <button id="tab-cpm-btn" onclick="switchTab('cpm')" class="px-3.5 py-2 rounded-lg bg-blue-600 text-white transition-all flex items-center gap-1.5">
+                <i data-lucide="gantt-chart-square" class="w-4 h-4"></i> Gantt & CPM
+            </button>
+            <button id="tab-ai-btn" onclick="switchTab('ai')" class="px-3.5 py-2 rounded-lg hover:text-white transition-all flex items-center gap-1.5">
+                <i data-lucide="bot" class="w-4 h-4 text-purple-400"></i> CTM & Gemini AI Advisor
+            </button>
+            <button id="tab-upload-btn" onclick="switchTab('upload')" class="px-3.5 py-2 rounded-lg hover:text-white transition-all flex items-center gap-1.5">
+                <i data-lucide="cloud-upload" class="w-4 h-4"></i> Upload Revit Model
+            </button>
+            <button id="tab-daily-btn" onclick="switchTab('daily')" class="px-3.5 py-2 rounded-lg hover:text-white transition-all flex items-center gap-1.5">
+                <i data-lucide="edit-3" class="w-4 h-4"></i> Daily Progress Log
+            </button>
+            <button id="tab-analytics-btn" onclick="switchTab('analytics')" class="px-3.5 py-2 rounded-lg hover:text-white transition-all flex items-center gap-1.5">
+                <i data-lucide="line-chart" class="w-4 h-4"></i> S-Curve & Analytics
+            </button>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <button onclick="openNewTaskModal()" class="bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow-lg shadow-blue-600/20 flex items-center gap-2 transition-all">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i> Add Work Item
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto p-6 space-y-6 max-w-7xl mx-auto w-full">
+
+        <!-- Top Overview KPIs -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-sm relative overflow-hidden">
+                <div class="absolute right-4 top-4 p-2.5 bg-blue-500/10 rounded-xl text-blue-400">
+                    <i data-lucide="trending-up" class="w-5 h-5"></i>
+                </div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Overall Progress</p>
+                <h3 class="text-2xl font-bold text-white mt-1" id="kpi-overall-progress">0%</h3>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-sm relative overflow-hidden">
+                <div class="absolute right-4 top-4 p-2.5 bg-rose-500/10 rounded-xl text-rose-400">
+                    <i data-lucide="git-commit" class="w-5 h-5"></i>
+                </div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Critical Path Duration</p>
+                <h3 class="text-2xl font-bold text-white mt-1" id="kpi-cpm-duration">0 Days</h3>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-sm relative overflow-hidden">
+                <div class="absolute right-4 top-4 p-2.5 bg-amber-500/10 rounded-xl text-amber-400">
+                    <i data-lucide="indian-rupee" class="w-5 h-5"></i>
+                </div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Resource Cost</p>
+                <h3 class="text-2xl font-bold text-emerald-400 mt-1" id="kpi-total-cost">₹0</h3>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-sm relative overflow-hidden">
+                <div class="absolute right-4 top-4 p-2.5 bg-emerald-500/10 rounded-xl text-emerald-400">
+                    <i data-lucide="users" class="w-5 h-5"></i>
+                </div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Workforce Deployed</p>
+                <h3 class="text-2xl font-bold text-white mt-1" id="kpi-active-labor">0 Units</h3>
+            </div>
+        </div>
+
+        <!-- TAB 1: GANTT & CPM -->
+        <div id="tab-cpm" class="space-y-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="bar-chart-3" class="w-5 h-5 text-blue-500"></i> Construction Gantt Timeline (Progress % View)
+                    </h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <div class="min-w-[850px]" id="gantt-chart-wrapper">
+                        <div class="grid grid-cols-12 gap-2 text-center text-xs font-semibold text-slate-400 pb-2 border-b border-slate-800/80 mb-3" id="gantt-header-dates"></div>
+                        <div id="gantt-task-rows" class="space-y-2.5"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="cpu" class="w-5 h-5 text-purple-400"></i> CPM Network Calculations & Cost Breakdown (₹)
+                    </h2>
+                    <button onclick="eraseAllProjectData()" class="bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 text-xs px-3 py-1.5 rounded-xl font-semibold">Erase All Data</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-950 text-slate-400 uppercase font-semibold border-b border-slate-800">
+                            <tr>
+                                <th class="p-3">ID & Task Name</th>
+                                <th class="p-3">Predecessors</th>
+                                <th class="p-3">Dur (Days)</th>
+                                <th class="p-3 text-blue-400">ES</th>
+                                <th class="p-3 text-blue-400">EF</th>
+                                <th class="p-3 text-amber-400">LS</th>
+                                <th class="p-3 text-amber-400">LF</th>
+                                <th class="p-3 text-rose-400">Float</th>
+                                <th class="p-3 text-emerald-400">Total Cost (₹)</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3 text-center">Erase</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cpm-table-body" class="divide-y divide-slate-800 text-slate-300"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: AI ADVISOR & GEMINI CHAT -->
+        <div id="tab-ai" class="space-y-6 hidden">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i data-lucide="bot" class="w-5 h-5 text-purple-400"></i> CTM & Gemini Expert AI Advisor
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-1">Ask any question about level-wise costs, daily logs, or schedule crashing.</p>
+                    </div>
+                    <button onclick="runCtmAdvisorAudit()" class="bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2 px-4 rounded-xl text-xs flex items-center gap-1.5">
+                        <i data-lucide="shield-check" class="w-4 h-4"></i> Run CTM Audit
+                    </button>
+                </div>
+
+                <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 space-y-4">
+                    <div class="text-xs font-bold text-purple-300 uppercase">Interactive AI Consultant (Live Data Analysis)</div>
+                    <div class="flex gap-2">
+                        <input type="text" id="ai-agent-prompt" placeholder="e.g. What is the total cost of Level 0? or Show S-Curve status." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white">
+                        <button onclick="executeAdvancedAiQuery()" class="bg-purple-600 hover:bg-purple-500 text-white font-semibold px-4 py-2 rounded-xl text-xs">Ask AI Advisor</button>
+                    </div>
+                    <div id="ai-response-box" class="bg-slate-900 p-4 rounded-xl border border-slate-800 text-xs text-slate-300 min-h-[140px] overflow-y-auto space-y-2">
+                        <em>AI Advisor ready. Ask about Level 0, 1, or 2 costs, daily logs, or progress.</em>
+                    </div>
+                </div>
+
+                <div class="bg-slate-950 p-5 rounded-xl border border-blue-500/30 space-y-4">
+                    <h3 class="text-xs font-bold text-blue-300 uppercase flex items-center gap-2">
+                        <i data-lucide="zap" class="w-4 h-4 text-blue-400"></i> Crashing on Remaining Scope
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+                        <div>
+                            <label class="block text-[10px] uppercase font-semibold text-slate-400 mb-1">Target Crash Duration for Remaining Scope (Days)</label>
+                            <input type="number" id="crash-target-days" value="15" min="1" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-bold">
+                        </div>
+                        <div class="sm:col-span-2 flex items-end gap-2 pt-4 sm:pt-0">
+                            <button onclick="executeOverallProjectCrash()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 px-4 rounded-xl text-xs transition flex items-center justify-center gap-2">
+                                <i data-lucide="sliders" class="w-4 h-4"></i> Crash Remaining Scope & Sync Resources
+                            </button>
+                            <button onclick="ctmResourceLevelingAudit()" class="bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 font-semibold py-2.5 px-4 rounded-xl text-xs transition">
+                                Leveling Audit
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="ai-recommendations-grid" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- TAB: UPLOAD REVIT MODEL -->
+        <div id="tab-upload" class="space-y-6 hidden">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                <h2 class="text-lg font-bold text-white mb-2">Autodesk Revit File & Dynamic Productivity Parser</h2>
+                <div class="bg-slate-950 rounded-2xl border border-slate-800 p-8 text-center space-y-6">
+                    <div id="dropZone" class="border-2 border-dashed border-slate-700 hover:border-blue-500 transition rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer bg-slate-900/40 relative">
+                        <input type="file" id="revitFileInput" accept=".json,.csv,.txt" class="absolute inset-0 opacity-0 cursor-pointer" onchange="handleFileSelect(event)">
+                        <i data-lucide="file-up" class="w-8 h-8 text-blue-400 mb-2"></i>
+                        <h3 class="text-sm font-bold text-white">Drop your <span class="text-blue-400">model_data.json</span> here or browse</h3>
+                    </div>
+
+                    <div id="fileInfoCard" class="hidden bg-slate-900 p-5 rounded-xl border border-slate-800 text-left space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Filter Level</label>
+                                <select id="import-level-filter" onchange="updateImportCount()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-semibold">
+                                    <option value="ALL">Entire Building (All Levels)</option>
+                                    <option value="Level 0">Level 0</option>
+                                    <option value="Level 1">Level 1</option>
+                                    <option value="Level 2">Level 2</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Default Scope Unit</label>
+                                <select id="import-unit-type" onchange="updateImportCount()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white font-semibold">
+                                    <option value="m³">m³ (Cubic Meters)</option>
+                                    <option value="m²">m² (Square Meters)</option>
+                                    <option value="kg">kg (Kilograms)</option>
+                                    <option value="tons">tons (Metric Tons)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Planned Days</label>
+                                <input type="number" id="import-planned-days" value="10" min="1" onchange="updateImportCount()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-blue-400 uppercase">Daily Productivity Rates & Custom Units</span>
+                                <button type="button" onclick="addCustomProductivityResource()" class="bg-blue-600/25 hover:bg-blue-600/40 text-blue-300 border border-blue-500/30 px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition">
+                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add Custom Resource
+                                </button>
+                            </div>
+                            <div id="productivity-resources-list" class="space-y-2.5"></div>
+                        </div>
+
+                        <div class="pt-3 border-t border-slate-800 flex justify-between items-center">
+                            <span class="text-xs text-slate-300 font-medium" id="parsedElementsCount">Ready for import.</span>
+                            <button onclick="importRevitElementsToProject()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs px-4 py-2.5 rounded-xl">Import Tasks</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: DAILY PROGRESS LOG -->
+        <div id="tab-daily" class="grid grid-cols-1 lg:grid-cols-3 gap-6 hidden">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-white mb-4 pb-3 border-b border-slate-800">Daily Progress Log</h2>
+                    <form id="progress-form" onsubmit="handleDailyProgressSubmit(event)" class="space-y-3.5">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Select Work Item</label>
+                            <select id="task-select" onchange="onTaskSelectChange()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"></select>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Work Done Today (<span id="unit-label">m³</span>)</label>
+                                <input type="number" step="0.1" id="daily-work-done" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white" placeholder="e.g. 8">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Entry Date</label>
+                                <input type="date" id="daily-date" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white">
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2.5">
+                            <div class="text-[11px] font-bold text-blue-400 uppercase">Daily Resource Counts & Cost/Day (₹)</div>
+                            <div id="daily-resources-inputs" class="space-y-2"></div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 uppercase mb-1">Notes</label>
+                            <textarea id="daily-notes" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white" placeholder="Progress notes..."></textarea>
+                        </div>
+
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 px-4 rounded-xl text-xs">Submit Daily Progress</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+                <h2 class="text-lg font-bold text-white mb-2">Daily Logs History & Pace Variance Stream</h2>
+                <div id="daily-logs-feed" class="space-y-2.5 max-h-[350px] overflow-y-auto"></div>
+            </div>
+        </div>
+
+        <!-- TAB: ANALYTICS -->
+        <div id="tab-analytics" class="space-y-6 hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 h-96 relative flex flex-col">
+                    <h3 class="text-xs font-bold text-slate-300 uppercase mb-3">Daily Log S-Curve (Date-Based % Progress)</h3>
+                    <div class="flex-1 relative w-full h-full"><canvas id="sCurveChart"></canvas></div>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 h-96 relative flex flex-col">
+                    <h3 class="text-xs font-bold text-slate-300 uppercase mb-3">Daily Resource Cost vs Budget (₹)</h3>
+                    <div class="flex-1 relative w-full h-full"><canvas id="costChart"></canvas></div>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 h-96 relative flex flex-col">
+                    <h3 class="text-xs font-bold text-slate-300 uppercase mb-3">Daily Workforce Histogram</h3>
+                    <div class="flex-1 relative w-full h-full"><canvas id="laborChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal for Adding Task -->
+    <div id="newTaskModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
+            <h3 class="text-base font-bold text-white">Add Custom Work Item & Predecessors</h3>
+            <form id="new-task-form" onsubmit="handleAddNewTask(event)" class="space-y-3.5 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-300 uppercase mb-1">Work Item Name (e.g. Level 0 Foundations)</label>
+                    <input type="text" id="new-name" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-white" placeholder="e.g. Level 0 Foundations">
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-300 uppercase mb-1">Scope</label>
+                        <input type="number" step="0.1" id="new-total" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 uppercase mb-1">Unit</label>
+                        <select id="new-unit" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-white font-semibold">
+                            <option value="m³">m³</option>
+                            <option value="m²">m²</option>
+                            <option value="kg">kg</option>
+                            <option value="tons">tons</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 uppercase mb-1">Days</label>
+                        <input type="number" id="new-planned-days" required value="10" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-300 uppercase mb-1">Predecessor Task ID(s)</label>
+                    <input type="text" id="new-predecessors" placeholder="e.g. 1, 2" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-white">
+                </div>
+                <div class="pt-3 flex justify-end gap-3">
+                    <button type="button" onclick="closeNewTaskModal()" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-blue-600 text-white rounded-xl font-semibold">Add Item</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Crashing Resource Advice Modal -->
+    <div id="crashAdviceModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl p-6 space-y-4 shadow-2xl">
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+                <i data-lucide="zap" class="w-5 h-5 text-blue-400"></i> Crashing Resource & Crew Breakdown Requirement
+            </h3>
+            <p class="text-xs text-slate-400">To meet your targeted crash duration on remaining scopes, the dashboard has calculated the exact workforce and machinery deployment rates required per day:</p>
+            <div id="crash-advice-content" class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3 max-h-[300px] overflow-y-auto text-xs text-slate-300"></div>
+            <div class="pt-3 flex justify-end gap-3">
+                <button type="button" onclick="closeCrashAdviceModal()" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-semibold text-xs">Got It & Apply</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let productivityResources = [
+            { id: 'labor', name: 'Labor', rate: 2.5, unit: 'm³/day', count: 12, costPerDay: 12500 },
+            { id: 'mason', name: 'Mason', rate: 4.0, unit: 'm³/day', count: 3, costPerDay: 18000 },
+            { id: 'machinery', name: 'Machinery', rate: 15.0, unit: 'm³/day', count: 2, costPerDay: 45000 }
+        ];
+
+        let tasks = [];
+        let dailyLogs = [];
+        let rawLoadedJsonData = null;
+        let aggregatedImportReady = [];
+        let cpmResults = {};
+        let sCurveChartInstance = null;
+        let costChartInstance = null;
+        let laborChartInstance = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            document.getElementById('daily-date').valueAsDate = new Date();
+            renderProductivityResourcesConfig();
+            
+            // Add initial sample tasks so the app is fully interactive immediately
+            tasks = [
+                { id: 1, name: "Level 0 Foundation Excavation", totalQty: 150, completedQty: 0, unit: "m³", plannedDuration: 10, actualDaysElapsed: 0, predecessors: [], status: 'on-time', resources: JSON.parse(JSON.stringify(productivityResources)) },
+                { id: 2, name: "Level 1 Columns & Slabs", totalQty: 220, completedQty: 0, unit: "m³", plannedDuration: 14, actualDaysElapsed: 0, predecessors: [1], status: 'on-time', resources: JSON.parse(JSON.stringify(productivityResources)) },
+                { id: 3, name: "Level 2 Framing", totalQty: 180, completedQty: 0, unit: "m³", plannedDuration: 12, actualDaysElapsed: 0, predecessors: [2], status: 'on-time', resources: JSON.parse(JSON.stringify(productivityResources)) }
+            ];
+
+            recalculateCPM();
+            populateTaskDropdown();
+            renderDashboard();
+            renderLogsFeed();
+        });
+
+        function renderProductivityResourcesConfig() {
+            const container = document.getElementById('productivity-resources-list');
+            if (!container) return;
+            container.innerHTML = '';
+
+            productivityResources.forEach((res, index) => {
+                const div = document.createElement('div');
+                div.className = "grid grid-cols-12 gap-2 items-center bg-slate-900 p-2.5 rounded-xl border border-slate-800 text-xs";
+                div.innerHTML = `
+                    <div class="col-span-3">
+                        <input type="text" value="${res.name}" onchange="updateResProp(${index}, 'name', this.value)" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-white font-semibold" placeholder="Resource Name">
+                    </div>
+                    <div class="col-span-3">
+                        <input type="number" step="0.1" value="${res.rate}" onchange="updateResProp(${index}, 'rate', parseFloat(this.value))" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-white" placeholder="Rate">
+                    </div>
+                    <div class="col-span-4">
+                        <input type="text" value="${res.unit}" onchange="updateResProp(${index}, 'unit', this.value)" class="w-full bg-slate-950 border border-slate-700 rounded px-2 py-1 text-emerald-400 font-semibold" placeholder="e.g. m3/day">
+                    </div>
+                    <div class="col-span-2 text-center">
+                        <button type="button" onclick="removeProductivityResource(${index})" class="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg transition" title="Remove">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        function addCustomProductivityResource() {
+            productivityResources.push({
+                id: 'res_' + Date.now(),
+                name: 'Custom Crew',
+                rate: 10.0,
+                unit: 'm³/day',
+                count: 2,
+                costPerDay: 20000
+            });
+            renderProductivityResourcesConfig();
+        }
+
+        function removeProductivityResource(index) {
+            if (productivityResources.length <= 1) {
+                alert("You must keep at least one resource.");
+                return;
+            }
+            productivityResources.splice(index, 1);
+            renderProductivityResourcesConfig();
+        }
+
+        function updateResProp(index, prop, val) {
+            productivityResources[index][prop] = val;
+        }
+
+        function updateTaskDuration(taskId, val) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+            const newDuration = parseInt(val);
+            if (!isNaN(newDuration) && newDuration > 0) {
+                task.plannedDuration = newDuration;
+                
+                const remainingQty = Math.max(0, task.totalQty - task.completedQty);
+                const dailyOutputNeeded = remainingQty > 0 ? remainingQty / newDuration : task.totalQty / newDuration;
+                task.resources.forEach(res => {
+                    const rate = res.rate || 1.0;
+                    res.count = Math.max(1, Math.ceil((dailyOutputNeeded / task.resources.length) / rate));
+                });
+
+                renderDashboard();
+                populateTaskDropdown();
+            }
+        }
+
+        function updateTaskCostRate(taskId, val) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+            const parsed = parseFloat(val);
+            if (!isNaN(parsed) && parsed >= 0 && task.resources.length > 0) {
+                task.resources[0].costPerDay = parsed / (task.plannedDuration * task.resources[0].count || 1);
+                renderDashboard();
+            }
+        }
+
+        // DYNAMIC CPM CALCULATION ENGINE FACTORING IN ACTUAL DAILY PROGRESS & CRASHING
+        function recalculateCPM() {
+            cpmResults = {};
+            tasks.forEach(t => {
+                cpmResults[t.id] = { es: 0, ef: 0, ls: Infinity, lf: Infinity, tf: 0, ff: 0, isCritical: false };
+            });
+
+            let changed = true;
+            let passCount = 0;
+            while (changed && passCount < tasks.length + 1) {
+                changed = false;
+                passCount++;
+                tasks.forEach(t => {
+                    let maxPredEF = 0;
+                    t.predecessors.forEach(predId => {
+                        if (cpmResults[predId] && cpmResults[predId].ef > maxPredEF) {
+                            maxPredEF = cpmResults[predId].ef;
+                        }
+                    });
+                    const es = maxPredEF;
+                    
+                    let effectiveDuration = t.plannedDuration;
+                    if (t.completedQty >= t.totalQty || t.status === 'completed') {
+                        effectiveDuration = t.actualDaysElapsed;
+                    } else if (t.completedQty > 0 && t.actualDaysElapsed > 0) {
+                        const currentRate = t.completedQty / t.actualDaysElapsed;
+                        const remainingQty = Math.max(0, t.totalQty - t.completedQty);
+                        const estimatedRemainingDays = currentRate > 0 ? Math.ceil(remainingQty / currentRate) : t.plannedDuration;
+                        effectiveDuration = t.actualDaysElapsed + estimatedRemainingDays;
+                    }
+
+                    const ef = es + effectiveDuration;
+                    if (cpmResults[t.id].es !== es || cpmResults[t.id].ef !== ef) {
+                        cpmResults[t.id].es = es;
+                        cpmResults[t.id].ef = ef;
+                        changed = true;
+                    }
+                });
+            }
+
+            let maxEF = 0;
+            tasks.forEach(t => {
+                if (cpmResults[t.id].ef > maxEF) maxEF = cpmResults[t.id].ef;
+            });
+
+            [...tasks].reverse().forEach(t => {
+                const successors = tasks.filter(s => s.predecessors.includes(t.id));
+                let minSuccLS = maxEF;
+                if (successors.length > 0) minSuccLS = Math.min(...successors.map(s => cpmResults[s.id].ls));
+                
+                let effectiveDuration = t.plannedDuration;
+                if (t.completedQty >= t.totalQty || t.status === 'completed') {
+                    effectiveDuration = t.actualDaysElapsed;
+                } else if (t.completedQty > 0 && t.actualDaysElapsed > 0) {
+                    const currentRate = t.completedQty / t.actualDaysElapsed;
+                    const remainingQty = Math.max(0, t.totalQty - t.completedQty);
+                    const estimatedRemainingDays = currentRate > 0 ? Math.ceil(remainingQty / currentRate) : t.plannedDuration;
+                    effectiveDuration = t.actualDaysElapsed + estimatedRemainingDays;
+                }
+
+                const lf = minSuccLS;
+                const ls = lf - effectiveDuration;
+                cpmResults[t.id].lf = lf;
+                cpmResults[t.id].ls = ls;
+            });
+
+            tasks.forEach(t => {
+                const res = cpmResults[t.id];
+                res.tf = res.ls - res.es;
+                res.isCritical = (res.tf === 0);
+            });
+        }
+
+        function switchTab(tab) {
+            ['cpm', 'ai', 'upload', 'daily', 'analytics'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}-btn`).className = "px-3.5 py-2 rounded-lg hover:text-white transition-all flex items-center gap-1.5";
+            });
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}-btn`).className = "px-3.5 py-2 rounded-lg bg-blue-600 text-white transition-all flex items-center gap-1.5";
+            if (tab === 'analytics') renderAnalyticsCharts();
+            if (tab === 'ai') runCtmAdvisorAudit();
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    rawLoadedJsonData = JSON.parse(e.target.result);
+                    updateImportCount();
+                    document.getElementById('fileInfoCard').classList.remove('hidden');
+                } catch (err) {
+                    alert("Invalid JSON file format.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function updateImportCount() {
+            if (!rawLoadedJsonData || !rawLoadedJsonData.elements) return;
+            const selectedLevel = document.getElementById('import-level-filter').value;
+            const userPlannedDays = parseInt(document.getElementById('import-planned-days').value) || 10;
+            const customUnit = document.getElementById('import-unit-type').value;
+
+            let filtered = rawLoadedJsonData.elements;
+            if (selectedLevel !== 'ALL') filtered = filtered.filter(el => el.level === selectedLevel);
+
+            const groups = {};
+            filtered.forEach(el => {
+                const key = `${el.level || 'Level 0'} ${el.category || 'Element'}s`;
+                if (!groups[key]) groups[key] = { name: key, totalQty: 0 };
+                groups[key].totalQty += (el.volume || 10);
+            });
+
+            aggregatedImportReady = Object.values(groups).map(g => {
+                const dailyOutputNeeded = g.totalQty / userPlannedDays;
+                let clonedResources = JSON.parse(JSON.stringify(productivityResources));
+                clonedResources.forEach(res => {
+                    res.count = Math.max(1, Math.ceil((dailyOutputNeeded / clonedResources.length) / (res.rate || 1)));
+                });
+
+                return {
+                    name: g.name,
+                    totalQty: g.totalQty,
+                    unit: customUnit,
+                    plannedDuration: userPlannedDays,
+                    resources: clonedResources
+                };
+            });
+
+            document.getElementById('parsedElementsCount').innerText = `Extracted ${aggregatedImportReady.length} items ready for import.`;
+        }
+
+        function importRevitElementsToProject() {
+            if (!aggregatedImportReady.length) return;
+            let nextId = tasks.length ? Math.max(...tasks.map(t => t.id)) + 1 : 1;
+            aggregatedImportReady.forEach((item, idx) => {
+                let preds = idx === 0 && tasks.length ? [tasks[tasks.length - 1].id] : (idx > 0 ? [nextId - 1] : []);
+                tasks.push({ id: nextId++, ...item, completedQty: 0, actualDaysElapsed: 0, predecessors: preds, status: 'on-time' });
+            });
+            renderDashboard();
+            populateTaskDropdown();
+            switchTab('cpm');
+        }
+
+        function executeAdvancedAiQuery() {
+            const query = document.getElementById('ai-agent-prompt').value.toLowerCase();
+            const box = document.getElementById('ai-response-box');
+            if (!query) {
+                box.innerHTML = "<em>Please enter a question or command for the AI Advisor.</em>";
+                return;
+            }
+
+            let totalCost = 0;
+            let totalQtySum = 0;
+            let compQtySum = 0;
+            let maxDuration = 0;
+            let levelCosts = { 'level 0': 0, 'level 1': 0, 'level 2': 0 };
+
+            tasks.forEach(t => {
+                totalQtySum += t.totalQty;
+                compQtySum += t.completedQty;
+                let tCost = 0;
+                t.resources.forEach(r => tCost += (t.plannedDuration * r.count * r.costPerDay));
+                totalCost += tCost;
+                if (cpmResults[t.id]?.ef > maxDuration) maxDuration = cpmResults[t.id].ef;
+
+                let nameLower = t.name.toLowerCase();
+                if (nameLower.includes('level 0')) levelCosts['level 0'] += tCost;
+                else if (nameLower.includes('level 1')) levelCosts['level 1'] += tCost;
+                else if (nameLower.includes('level 2')) levelCosts['level 2'] += tCost;
+                else levelCosts['level 0'] += tCost / Math.max(1, tasks.length);
+            });
+
+            const overallProg = totalQtySum > 0 ? Math.round((compQtySum / totalQtySum) * 100) : 0;
+            let responseHTML = `<strong>Gemini & CTM AI Advisor Analysis for: "${query}"</strong><br><br>`;
+
+            if (query.includes('level 0')) {
+                responseHTML += `• <strong>Level 0 Cost:</strong> ₹${Math.round(levelCosts['level 0']).toLocaleString('en-IN')}`;
+            } else if (query.includes('level 1')) {
+                responseHTML += `• <strong>Level 1 Cost:</strong> ₹${Math.round(levelCosts['level 1']).toLocaleString('en-IN')}`;
+            } else if (query.includes('level 2')) {
+                responseHTML += `• <strong>Level 2 Cost:</strong> ₹${Math.round(levelCosts['level 2']).toLocaleString('en-IN')}`;
+            } else {
+                responseHTML += `• <strong>Project Summary:</strong><br>Active tasks: ${tasks.length}, Overall Progress: ${overallProg}%, Total Cost: ₹${totalCost.toLocaleString('en-IN')}.`;
+            }
+
+            box.innerHTML = responseHTML;
+        }
+
+        // CRASHING FUNCTION WITH EXACT CREW/LABOR ADVICE POPUP
+        function executeOverallProjectCrash() {
+            if (tasks.length === 0) {
+                alert("No tasks available in project.");
+                return;
+            }
+
+            const targetDaysInput = parseInt(document.getElementById('crash-target-days').value);
+            const overallTargetDays = (!isNaN(targetDaysInput) && targetDaysInput > 0) ? targetDaysInput : 15;
+            
+            let remainingScope = tasks.reduce((sum, t) => sum + Math.max(0, t.totalQty - t.completedQty), 0);
+            
+            if (remainingScope <= 0) {
+                alert("All tasks are already completed! Nothing left to crash.");
+                return;
+            }
+
+            let adviceHTML = `<div class="space-y-3">`;
+
+            tasks.forEach(t => {
+                const remQty = Math.max(0, t.totalQty - t.completedQty);
+                if (remQty > 0) {
+                    const proportion = remQty / remainingScope;
+                    const allocatedCrashDuration = Math.max(1, Math.round(overallTargetDays * proportion));
+                    
+                    t.plannedDuration = allocatedCrashDuration;
+                    const requiredDailyWork = remQty / allocatedCrashDuration;
+
+                    adviceHTML += `<div class="bg-slate-900 p-3 rounded-xl border border-slate-800 space-y-1.5">
+                        <div class="font-bold text-white">${t.name} (Remaining: ${remQty.toFixed(1)} ${t.unit})</div>
+                        <div class="text-blue-400">Target Duration: ${allocatedCrashDuration} Days | Required Pace: ${requiredDailyWork.toFixed(1)} ${t.unit}/day</div>
+                        <div class="text-slate-400 text-[11px] font-semibold uppercase">Required Daily Workforce & Machinery Deployment:</div>
+                        <div class="grid grid-cols-3 gap-2 pt-1">`;
+
+                    t.resources.forEach(res => {
+                        const neededCount = Math.max(1, Math.ceil((requiredDailyWork / t.resources.length) / (res.rate || 2.0)));
+                        res.count = neededCount;
+                        adviceHTML += `<div class="bg-slate-950 p-2 rounded-lg border border-slate-800 text-center">
+                            <span class="block text-[10px] text-slate-400">${res.name}</span>
+                            <span class="font-bold text-emerald-400 text-xs">${neededCount} Units</span>
+                        </div>`;
+                    });
+
+                    adviceHTML += `</div></div>`;
+                }
+            });
+
+            adviceHTML += `</div>`;
+            document.getElementById('crash-advice-content').innerHTML = adviceHTML;
+            openCrashAdviceModal();
+
+            renderDashboard();
+            renderLogsFeed();
+            populateTaskDropdown();
+            runCtmAdvisorAudit();
+        }
+
+        function openCrashAdviceModal() {
+            document.getElementById('crashAdviceModal').classList.remove('hidden');
+            document.getElementById('crashAdviceModal').classList.add('flex');
+        }
+
+        function closeCrashAdviceModal() {
+            document.getElementById('crashAdviceModal').classList.remove('flex');
+            document.getElementById('crashAdviceModal').classList.add('hidden');
+        }
+
+        function ctmResourceLevelingAudit() {
+            if (tasks.length === 0) { alert("No tasks available."); return; }
+            let report = "Resource Leveling Audit:\n\n";
+            tasks.forEach(t => {
+                let maxCap = 0;
+                t.resources.forEach(r => maxCap += (r.count * r.rate));
+                report += `• ${t.name}: Max Daily Capacity = ${maxCap.toFixed(1)} ${t.unit}/day\n`;
+            });
+            alert(report);
+        }
+
+        function eraseSingleTask(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            tasks.forEach(t => { t.predecessors = t.predecessors.filter(p => p !== id); });
+            renderDashboard();
+            populateTaskDropdown();
+        }
+
+        function eraseAllProjectData() {
+            if (confirm("Clear all project data?")) { tasks = []; dailyLogs = []; renderDashboard(); populateTaskDropdown(); }
+        }
+
+        function populateTaskDropdown() {
+            const select = document.getElementById('task-select');
+            if (!select) return;
+            select.innerHTML = '';
+            tasks.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = `${t.name} (${t.completedQty}/${t.totalQty} ${t.unit})`;
+                select.appendChild(opt);
+            });
+            onTaskSelectChange();
+        }
+
+        function onTaskSelectChange() {
+            const task = tasks.find(t => t.id === parseInt(document.getElementById('task-select').value));
+            if (!task) return;
+            document.getElementById('unit-label').textContent = task.unit;
+
+            const resContainer = document.getElementById('daily-resources-inputs');
+            resContainer.innerHTML = '';
+            task.resources.forEach((res, idx) => {
+                const row = document.createElement('div');
+                row.className = "grid grid-cols-2 gap-2";
+                row.innerHTML = `
+                    <div>
+                        <label class="block text-[9px] text-slate-400">${res.name} Count (${res.unit})</label>
+                        <input type="number" id="daily_res_count_${idx}" value="${res.count}" oninput="syncTaskResourcesFromForm(${task.id})" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-1 text-xs text-white">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] text-slate-400">${res.name} Rate/Day (₹)</label>
+                        <input type="number" id="daily_res_cost_${idx}" value="${res.costPerDay}" oninput="syncTaskResourcesFromForm(${task.id})" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-1 text-xs text-white">
+                    </div>
+                `;
+                resContainer.appendChild(row);
+            });
+        }
+
+        function syncTaskResourcesFromForm(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+            task.resources.forEach((r, idx) => {
+                const countInput = document.getElementById(`daily_res_count_${idx}`);
+                const costInput = document.getElementById(`daily_res_cost_${idx}`);
+                if (countInput && countInput.value !== '') r.count = parseInt(countInput.value) || r.count;
+                if (costInput && costInput.value !== '') r.costPerDay = parseFloat(costInput.value) || r.costPerDay;
+            });
+            renderDashboard();
+        }
+
+        function renderDashboard() {
+            recalculateCPM();
+            renderKPIs();
+            renderGanttChart();
+            renderCPMTable();
+            lucide.createIcons();
+            if (!document.getElementById('tab-analytics').classList.contains('hidden')) {
+                renderAnalyticsCharts();
+            }
+        }
+
+        function renderKPIs() {
+            let total = 0, comp = 0, cost = 0, workforce = 0, maxDur = 0;
+            tasks.forEach(t => {
+                total += t.totalQty;
+                comp += t.completedQty;
+                let taskCost = 0;
+                let activeDuration = (t.completedQty >= t.totalQty || t.status === 'completed') ? t.actualDaysElapsed : t.plannedDuration;
+                t.resources.forEach(r => {
+                    workforce += r.count;
+                    taskCost += (activeDuration * r.count * r.costPerDay);
+                });
+                cost += taskCost;
+                if (cpmResults[t.id]?.ef > maxDur) maxDur = cpmResults[t.id].ef;
+            });
+            document.getElementById('kpi-overall-progress').textContent = `${total > 0 ? Math.round((comp/total)*100) : 0}%`;
+            document.getElementById('kpi-cpm-duration').textContent = `${maxDur} Days`;
+            document.getElementById('kpi-total-cost').textContent = `₹${cost.toLocaleString('en-IN')}`;
+            document.getElementById('kpi-active-labor').textContent = `${workforce} Units`;
+        }
+
+        function renderGanttChart() {
+            const container = document.getElementById('gantt-task-rows');
+            const headerDates = document.getElementById('gantt-header-dates');
+            if (!container || !headerDates) return;
+            container.innerHTML = '';
+            
+            if (tasks.length === 0) {
+                container.innerHTML = '<div class="text-xs text-slate-500 text-center py-6">No tasks added yet. Upload a Revit model or add tasks manually.</div>';
+                headerDates.innerHTML = '<div class="col-span-12 text-center text-slate-500">Timeline Empty</div>';
+                return;
+            }
+
+            headerDates.innerHTML = '<div class="col-span-3 text-left pl-2">Task Name</div>';
+            const maxDays = Math.max(...Object.values(cpmResults).map(r => r.ef), 30);
+            for (let i = 0; i < 9; i++) {
+                const div = document.createElement('div');
+                div.textContent = `Day ${Math.round(i * (maxDays/8))}`;
+                headerDates.appendChild(div);
+            }
+            tasks.forEach(t => {
+                const cpm = cpmResults[t.id];
+                const left = (cpm.es / maxDays) * 100;
+                const activeDur = (t.completedQty >= t.totalQty || t.status === 'completed') ? t.actualDaysElapsed : t.plannedDuration;
+                const width = (activeDur / maxDays) * 100;
+                const progressPct = Math.min(100, Math.round((t.completedQty / (t.totalQty || 1)) * 100));
+                let color = t.status === 'delay' ? 'bg-rose-600' : (t.status === 'ahead' ? 'bg-amber-600' : (t.completedQty >= t.totalQty || t.status === 'completed' ? 'bg-blue-600' : 'bg-emerald-600'));
+                
+                container.innerHTML += `
+                    <div class="grid grid-cols-12 gap-2 items-center bg-slate-950/60 p-2 rounded-xl text-xs">
+                        <div class="col-span-3 font-semibold text-white truncate pl-1">${t.name} ${cpm.isCritical ? '⚡' : ''}</div>
+                        <div class="col-span-9 relative h-7 bg-slate-900 rounded-lg overflow-hidden border border-slate-800 flex items-center px-1">
+                            <div class="absolute h-5 rounded-md ${color} text-white font-bold px-2 text-[10px] flex items-center shadow" style="left: ${left}%; width: ${Math.max(width, 6)}%;">
+                                ${progressPct}% Complete (${activeDur}d)
+                            </div>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function renderCPMTable() {
+            const tbody = document.getElementById('cpm-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            
+            if (tasks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" class="p-6 text-center text-slate-500">No tasks in project.</td></tr>';
+                return;
+            }
+
+            tasks.forEach(t => {
+                const res = cpmResults[t.id];
+                let cost = 0;
+                const activeDur = (t.completedQty >= t.totalQty || t.status === 'completed') ? t.actualDaysElapsed : t.plannedDuration;
+                t.resources.forEach(r => cost += (activeDur * r.count * r.costPerDay));
+
+                let badge = `<span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] uppercase font-bold">On Time</span>`;
+                if (t.completedQty >= t.totalQty || t.status === 'completed') {
+                    badge = `<span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 text-[10px] uppercase font-bold">Completed</span>`;
+                } else if (t.status === 'delay') {
+                    badge = `<span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 text-[10px] uppercase font-bold">Delay</span>`;
+                } else if (t.status === 'ahead') {
+                    badge = `<span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[10px] uppercase font-bold">Ahead</span>`;
+                }
+
+                if (res.isCritical) {
+                    badge += ` <span class="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[9px] font-bold">Critical</span>`;
+                }
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-800/40">
+                        <td class="p-3 text-white font-medium">#${t.id} ${t.name} (${t.completedQty}/${t.totalQty} ${t.unit})</td>
+                        <td class="p-3 text-slate-400">${t.predecessors.join(', ') || 'None'}</td>
+                        <td class="p-3"><input type="number" value="${t.plannedDuration}" onchange="updateTaskDuration(${t.id}, this.value)" class="w-16 bg-slate-950 border border-slate-700 rounded px-1.5 py-1 text-white"></td>
+                        <td class="p-3 text-blue-400">${res.es}d</td>
+                        <td class="p-3 text-blue-400">${res.ef}d</td>
+                        <td class="p-3 text-amber-400">${res.ls}d</td>
+                        <td class="p-3 text-amber-400">${res.lf}d</td>
+                        <td class="p-3 text-rose-400">${res.tf}d</td>
+                        <td class="p-3 text-emerald-400"><input type="number" value="${Math.round(cost)}" onchange="updateTaskCostRate(${t.id}, this.value)" class="w-28 bg-slate-950 border border-slate-700 rounded px-1.5 py-1 text-emerald-400"></td>
+                        <td class="p-3">${badge}</td>
+                        <td class="p-3 text-center"><button onclick="eraseSingleTask(${t.id})" class="text-rose-400"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>
+                    </tr>`;
+            });
+            lucide.createIcons();
+        }
+
+        function handleDailyProgressSubmit(e) {
+            e.preventDefault();
+            const task = tasks.find(t => t.id === parseInt(document.getElementById('task-select').value));
+            let done = parseFloat(document.getElementById('daily-work-done').value);
+            const entryDate = document.getElementById('daily-date').value;
+            if (!task) return;
+
+            task.resources.forEach((r, idx) => {
+                const countInput = document.getElementById(`daily_res_count_${idx}`);
+                const costInput = document.getElementById(`daily_res_cost_${idx}`);
+                if (countInput && countInput.value !== '') r.count = parseInt(countInput.value) || r.count;
+                if (costInput && costInput.value !== '') r.costPerDay = parseFloat(costInput.value) || r.costPerDay;
+            });
+
+            let maxDailyCapacity = 0;
+            task.resources.forEach(r => maxDailyCapacity += (r.count * (r.rate || 1.0)));
+
+            const remainingQty = task.totalQty - task.completedQty;
+            
+            if (done > remainingQty) {
+                alert(`Error: Work done (${done} ${task.unit}) cannot exceed remaining quantity (${remainingQty} ${task.unit}).`);
+                return;
+            }
+            if (done > maxDailyCapacity) {
+                alert(`Capacity Error: Entered work (${done} ${task.unit}) exceeds max daily resource capacity (${maxDailyCapacity.toFixed(1)} ${task.unit}/day). Submission blocked.`);
+                return;
+            }
+
+            task.actualDaysElapsed += 1;
+            task.completedQty += done;
+
+            if (task.completedQty >= task.totalQty) {
+                task.status = 'completed';
+            } else {
+                const expectedPacePerDay = task.totalQty / task.plannedDuration;
+                const expectedCumulativeQty = expectedPacePerDay * task.actualDaysElapsed;
+                if (task.completedQty < expectedCumulativeQty) task.status = 'delay';
+                else if (task.completedQty > expectedCumulativeQty) task.status = 'ahead';
+                else task.status = 'on-time';
+            }
+
+            let dayCost = 0;
+            let dayLabor = 0;
+            task.resources.forEach(r => {
+                dayCost += (r.count * r.costPerDay);
+                dayLabor += r.count;
+            });
+
+            dailyLogs.push({
+                id: Date.now(),
+                date: entryDate,
+                rawQty: done,
+                taskName: task.name,
+                workDone: `${done} ${task.unit}`,
+                status: task.status,
+                dailyCost: dayCost,
+                dailyLabor: dayLabor
+            });
+            dailyLogs.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            renderDashboard();
+            renderLogsFeed();
+            populateTaskDropdown();
+            document.getElementById('daily-work-done').value = '';
+        }
+
+        function deleteDailyLog(logId) {
+            dailyLogs = dailyLogs.filter(l => l.id !== logId);
+            renderLogsFeed();
+            renderAnalyticsCharts();
+        }
+
+        function renderLogsFeed() {
+            const feed = document.getElementById('daily-logs-feed');
+            feed.innerHTML = dailyLogs.map(l => `
+                <div class="p-3 rounded-xl border border-slate-800 bg-slate-950 text-xs flex justify-between items-center">
+                    <div>
+                        <b>[${l.date}] ${l.taskName}</b>: ${l.workDone}
+                        <span class="ml-2 uppercase font-bold text-${l.status === 'delay' ? 'rose' : (l.status === 'ahead' ? 'amber' : (l.status === 'completed' ? 'blue' : 'emerald'))}-400">[${l.status}]</span>
+                    </div>
+                    <button onclick="deleteDailyLog(${l.id})" class="text-rose-400 hover:text-rose-300 p-1 transition" title="Delete Log">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>`).join('') || '<div class="text-xs text-slate-500 text-center py-4">No daily logs yet.</div>';
+            lucide.createIcons();
+        }
+
+        function runCtmAdvisorAudit() {
+            const grid = document.getElementById('ai-recommendations-grid');
+            if (!grid) return;
+            
+            if (tasks.length === 0) {
+                grid.innerHTML = `<div class="p-4 rounded-xl border border-purple-500/30 bg-purple-500/5 text-xs text-slate-300">No project tasks available.</div>`;
+                return;
+            }
+
+            let html = `<div class="p-4 rounded-xl border border-purple-500/30 bg-purple-500/5 text-xs text-slate-300 space-y-2">
+                <h4 class="font-bold text-purple-300 uppercase">CTM & Gemini Expert Advisor Analysis Log</h4>`;
+            
+            tasks.forEach(t => {
+                const cpm = cpmResults[t.id];
+                let maxCap = 0;
+                t.resources.forEach(r => maxCap += (r.count * r.rate));
+                const compPct = Math.round((t.completedQty / t.totalQty) * 100);
+                if (compPct === 100) html += `<p>✓ <b>${t.name}</b> completed successfully in ${t.actualDaysElapsed} days.</p>`;
+                else if (cpm && cpm.isCritical) html += `<p>⚡ <b>${t.name}</b> is on the <b>Critical Path</b>. Max daily capacity: ${maxCap.toFixed(1)} ${t.unit}/day.</p>`;
+                else html += `<p>ℹ <b>${t.name}</b> progress at ${compPct}%.</p>`;
+            });
+            html += `</div>`;
+            grid.innerHTML = html;
+        }
+
+        function openNewTaskModal() { document.getElementById('newTaskModal').classList.remove('hidden'); document.getElementById('newTaskModal').classList.add('flex'); }
+        function closeNewTaskModal() { document.getElementById('newTaskModal').classList.remove('flex'); document.getElementById('newTaskModal').classList.add('hidden'); }
+        
+        function handleAddNewTask(e) {
+            e.preventDefault();
+            const predInput = document.getElementById('new-predecessors').value;
+            const predecessors = predInput ? predInput.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x)) : [];
+
+            tasks.push({
+                id: tasks.length ? Math.max(...tasks.map(t => t.id)) + 1 : 1,
+                name: document.getElementById('new-name').value,
+                totalQty: parseFloat(document.getElementById('new-total').value),
+                completedQty: 0,
+                unit: document.getElementById('new-unit').value,
+                plannedDuration: parseInt(document.getElementById('new-planned-days').value),
+                actualDaysElapsed: 0, predecessors: predecessors, status: 'on-time',
+                resources: JSON.parse(JSON.stringify(productivityResources))
+            });
+            closeNewTaskModal();
+            renderDashboard();
+            populateTaskDropdown();
+            document.getElementById('new-task-form').reset();
+        }
+
+        function renderAnalyticsCharts() {
+            let datesMap = {};
+            dailyLogs.forEach(l => { datesMap[l.date] = true; });
+            let sortedDates = Object.keys(datesMap).sort((a, b) => new Date(a) - new Date(b));
+            if (sortedDates.length === 0) sortedDates = ['No Logs Yet'];
+
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: { color: '#cbd5e1', font: { family: 'Inter', size: 11 } }
+                    },
+                    tooltip: {
+                        backgroundColor: '#020617',
+                        titleColor: '#f8fafc',
+                        bodyColor: '#cbd5e1',
+                        borderColor: '#334155',
+                        borderWidth: 1,
+                        padding: 10
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(51, 65, 85, 0.2)' },
+                        ticks: { color: '#94a3b8', font: { size: 10 } }
+                    },
+                    y: {
+                        grid: { color: 'rgba(51, 65, 85, 0.3)' },
+                        ticks: { color: '#94a3b8', font: { size: 10 } },
+                        beginAtZero: true
+                    }
+                }
+            };
+
+            const sCurveCtx = document.getElementById('sCurveChart')?.getContext('2d');
+            if (sCurveCtx) {
+                if (sCurveChartInstance) sCurveChartInstance.destroy();
+
+                let totalProjectQty = tasks.reduce((sum, t) => sum + t.totalQty, 0) || 1;
+                let cumulativeQty = 0;
+                let actualProgressPoints = [];
+                let plannedProgressPoints = [];
+
+                sortedDates.forEach((dateStr, idx) => {
+                    let dayLogs = dailyLogs.filter(l => l.date === dateStr);
+                    let dayQty = dayLogs.reduce((sum, l) => sum + (l.rawQty || 0), 0);
+                    cumulativeQty += dayQty;
+                    let pct = Math.min(100, Math.round((cumulativeQty / totalProjectQty) * 100));
+                    actualProgressPoints.push(pct);
+
+                    let plannedPct = Math.min(100, Math.round(((idx + 1) / Math.max(1, sortedDates.length)) * 100));
+                    plannedProgressPoints.push(plannedPct);
+                });
+
+                if (sortedDates.length === 1 && sortedDates[0] === 'No Logs Yet') {
+                    actualProgressPoints = [0];
+                    plannedProgressPoints = [0];
+                }
+
+                sCurveChartInstance = new Chart(sCurveCtx, {
+                    type: 'line',
+                    data: {
+                        labels: sortedDates,
+                        datasets: [
+                            { label: 'Planned S-Curve (%)', data: plannedProgressPoints, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 2, fill: true, tension: 0.3 },
+                            { label: 'Actual Progress (%)', data: actualProgressPoints, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.15)', borderWidth: 3, fill: true, tension: 0.3 }
+                        ]
+                    },
+                    options: {
+                        ...commonOptions,
+                        scales: {
+                            ...commonOptions.scales,
+                            y: { ...commonOptions.scales.y, max: 100 }
+                        }
+                    }
+                });
+            }
+
+            const costCtx = document.getElementById('costChart')?.getContext('2d');
+            if (costCtx) {
+                if (costChartInstance) costChartInstance.destroy();
+
+                let dailyCostPoints = [];
+                let cumulativeBudgetPoints = [];
+                let runningCost = 0;
+
+                sortedDates.forEach((dateStr) => {
+                    let dayLogs = dailyLogs.filter(l => l.date === dateStr);
+                    let dayCost = dayLogs.reduce((sum, l) => sum + (l.dailyCost || 0), 0);
+                    dailyCostPoints.push(Math.round(dayCost));
+
+                    runningCost += dayCost;
+                    cumulativeBudgetPoints.push(Math.round(runningCost));
+                });
+
+                if (sortedDates.length === 1 && sortedDates[0] === 'No Logs Yet') {
+                    dailyCostPoints = [0];
+                    cumulativeBudgetPoints = [0];
+                }
+
+                costChartInstance = new Chart(costCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedDates,
+                        datasets: [
+                            { label: 'Daily Cost (₹)', data: dailyCostPoints, backgroundColor: '#3b82f6', borderRadius: 6 },
+                            { label: 'Cumulative Spend (₹)', data: cumulativeBudgetPoints, type: 'line', borderColor: '#f59e0b', backgroundColor: 'transparent', borderWidth: 2.5, tension: 0.2, yAxisID: 'y' }
+                        ]
+                    },
+                    options: commonOptions
+                });
+            }
+
+            const laborCtx = document.getElementById('laborChart')?.getContext('2d');
+            if (laborCtx) {
+                if (laborChartInstance) laborChartInstance.destroy();
+
+                let dailyLaborPoints = [];
+                sortedDates.forEach(dateStr => {
+                    let dayLogs = dailyLogs.filter(l => l.date === dateStr);
+                    let dayLabor = dayLogs.reduce((sum, l) => sum + (l.dailyLabor || 0), 0);
+                    dailyLaborPoints.push(dayLabor);
+                });
+
+                if (sortedDates.length === 1 && sortedDates[0] === 'No Logs Yet') {
+                    dailyLaborPoints = [0];
+                }
+
+                laborChartInstance = new Chart(laborCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedDates,
+                        datasets: [{ label: 'Crew Units Deployed / Day', data: dailyLaborPoints, backgroundColor: '#8b5cf6', borderRadius: 6 }]
+                    },
+                    options: commonOptions
+                });
+            }
+        }
+    </script>
+</body>
+</html>
